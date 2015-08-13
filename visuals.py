@@ -13,6 +13,10 @@ from sklearn.linear_model import LogisticRegression
 
 N_COMPONENTS = 10
 
+# this will show the 10 prettiest dresses, the 10 ugliest dresses, etc 
+# change if you want more or less
+N_DRESSES_TO_SHOW = 10
+
 # this is the size of all the Amazon.com images
 # If you are using a different source, change the size here 
 STANDARD_SIZE = (200,260)
@@ -65,23 +69,24 @@ def image_from_component(component):
     im.putdata(d)
     return im
 
-# write out each eigenshirt and the shirts that 
+# write out each eigendress and the dresses that most and least match it
+# the file names here are chosen because of the order i wanna look at the results
+# (when displayed alphabetically in finder)
 for i,component in enumerate(pca.components_):
     img = image_from_component(component)
-    img.save(str(i) + "_eigenshirt.png")
+    img.save("results/eigendresses/" + str(i) + "_eigendress___.png")
     reverse_img = PIL.ImageOps.invert(img)
-    reverse_img.save(str(i) + "_inverted_eigenshirt.png")
-
+    reverse_img.save("results/eigendresses/" + str(i) + "_eigendress_inverted.png")
     ranked_shirts = sorted(enumerate(X),
            key=lambda (a,x): x[i])
     most_i = ranked_shirts[-1][0]
     least_i = ranked_shirts[0][0]
-    ranked_shirts.sort(key=lambda (a,x): abs(x[i]))
-    no_i = ranked_shirts[0][0]
 
-    Image.open(raw_data[most_i][2]).save(str(i) + "_most.png")
-    Image.open(raw_data[least_i][2]).save(str(i) + "_least.png")
-    Image.open(raw_data[no_i][2]).save(str(i) + "_none.png")
+    for j in range(N_DRESSES_TO_SHOW):
+        most_j = j * -1 - 1
+        print(most_j)
+        Image.open(raw_data[ranked_shirts[most_j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress__most" + str(j) + ".png")
+        Image.open(raw_data[ranked_shirts[j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress_least" + str(j) + ".png")
 
 def reconstruct(shirt_number):
     """needs 100+ components to look interesting"""
@@ -120,32 +125,44 @@ print "score",clf.score(X_test,y_test)
     
 # and now some qualitative results
 
-# first, let's find the model score for every shirt in our dataset
+# first, let's find the model score for every dress in our dataset
 probs = zip(clf.decision_function(X),raw_data)
 
-girliest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,p))[0]
-girliest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,p))[0]
-boyiest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,-p))[0]
-boyiest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,-p))[0]
-most_androgynous_shirt = sorted(probs,key=lambda (p,(cd,g,f)): abs(p))[0]
+prettiest_liked_things = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,p))
+prettiest_disliked_things = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,p))
+ugliest_liked_things = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,-p))
+ugliest_disliked_things = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,-p))
+in_between_things = sorted(probs,key=lambda (p,(cd,g,f)): abs(p))
 
-# and let's look at the most and least extreme shirts
+# and let's look at the most and least extreme dresses
 cd = zip(X,raw_data)
-least_extreme_shirt = sorted(cd,key=lambda (x,(d,g,f)): sum([abs(c) for c in x]))[0]
-most_extreme_shirt =  sorted(cd,key=lambda (x,(d,g,f)): sum([abs(c) for c in x]),reverse=True)[0]
+least_extreme_things = sorted(cd,key=lambda (x,(d,g,f)): sum([abs(c) for c in x]))
+most_extreme_things =  sorted(cd,key=lambda (x,(d,g,f)): sum([abs(c) for c in x]),reverse=True)
 
-least_interesting_shirt = sorted(cd,key=lambda (x,(d,g,f)): max([abs(c) for c in x]))[0]
-most_interesting_shirt =  sorted(cd,key=lambda (x,(d,g,f)): min([abs(c) for c in x]),reverse=True)[0]
+least_interesting_things = sorted(cd,key=lambda (x,(d,g,f)): max([abs(c) for c in x]))
+most_interesting_things =  sorted(cd,key=lambda (x,(d,g,f)): min([abs(c) for c in x]),reverse=True)
+
+for i in range(10):
+    Image.open(prettiest_liked_things[i][1][2]).save("results/notableDresses/prettiest_pretty_" + str(i) + ".png")
+    Image.open(prettiest_disliked_things[i][1][2]).save("results/notableDresses/prettiest_ugly_" + str(i) + ".png")
+    Image.open(ugliest_liked_things[i][1][2]).save("results/notableDresses/ugliest_pretty_" + str(i) + ".png")
+    Image.open(ugliest_disliked_things[i][1][2]).save("results/notableDresses/ugliest_ugly_" + str(i) + ".png")
+    Image.open(in_between_things[i][1][2]).save("results/notableDresses/neither_pretty_nor_ugly_" + str(i) + ".png")
+    Image.open(least_extreme_things[i][1][2]).save("results/notableDresses/least_extreme_" + str(i) + ".png")
+    Image.open(most_extreme_things[i][1][2]).save("results/notableDresses/most_extreme_" + str(i) + ".png")
+    Image.open(least_interesting_things[i][1][2]).save("results/notableDresses/least_interesting_" + str(i) + ".png")
+    Image.open(most_interesting_things[i][1][2]).save("results/notableDresses/most_interesting_" + str(i) + ".png")
+
 
 # and now let's look at precision-recall
 probs = zip(clf.decision_function(X_test),raw_data[train_split:])
-num_boys = len([c for c in y_test if c == 1])
-num_girls = len([c for c in y_test if c == 0])
+num_dislikes = len([c for c in y_test if c == 1])
+num_likes = len([c for c in y_test if c == 0])
 lowest_score = round(min([p[0] for p in probs]),1) - 0.1
 highest_score = round(max([p[0] for p in probs]),1) + 0.1
 INTERVAL = 0.1
 
-# first do the girls
+# first do the likes
 score = lowest_score
 while score <= highest_score:
     true_positives  = len([p for p in probs if p[0] <= score and p[1][1] == 'like'])
@@ -153,11 +170,11 @@ while score <= highest_score:
     positives = true_positives + false_positives
     if positives > 0:
         precision = 1.0 * true_positives / positives
-        recall = 1.0 * true_positives / num_girls
+        recall = 1.0 * true_positives / num_likes
         print "likes",score,precision,recall
     score += INTERVAL
 
-# then do the boys
+# then do the dislikes
 score = highest_score
 while score >= lowest_score:
     true_positives  = len([p for p in probs if p[0] >= score and p[1][1] == 'dislike'])
@@ -165,7 +182,7 @@ while score >= lowest_score:
     positives = true_positives + false_positives
     if positives > 0:
         precision = 1.0 * true_positives / positives
-        recall = 1.0 * true_positives / num_boys
+        recall = 1.0 * true_positives / num_dislikes
         print "dislikes",score,precision,recall
     score -= INTERVAL
 
