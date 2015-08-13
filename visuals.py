@@ -11,15 +11,15 @@ import re
 from sklearn.decomposition import RandomizedPCA
 from sklearn.linear_model import LogisticRegression
 
+N_COMPONENTS = 10
 
-# this is the size of all the Target.com images
-STANDARD_SIZE = (138,138)
+# this is the size of all the Amazon.com images
+# If you are using a different source, change the size here 
+STANDARD_SIZE = (200,260)
 HALF_SIZE = (STANDARD_SIZE[0]/2,STANDARD_SIZE[1]/2)
 
 def img_to_array(filename):
-    """
-    takes a filename and turns it into a numpy array of RGB pixels
-    """
+    """takes a filename and turns it into a numpy array of RGB pixels"""
     img = Image.open(filename)
     img = img.resize(STANDARD_SIZE)
     img = list(img.getdata())
@@ -47,7 +47,6 @@ data = np.array([cd for (cd,_y,f) in raw_data])
 labels = np.array([_y for (cd,_y,f) in raw_data])
 
 # find the principal components
-N_COMPONENTS = 10
 pca = RandomizedPCA(n_components=N_COMPONENTS, random_state=0)
 X = pca.fit_transform(data)
 y = [1 if label == 'boy' else 0 for label in labels]
