@@ -29,14 +29,14 @@ def img_to_array(filename):
     img_wide = img.reshape(1, s)
     return img_wide[0]
 
-# my files are set up like "images/girls/gapkids/image1.jpg" and "images/boys/oldnavy/image1.jpg"
-girls_files = glob('images/girls/*/*')
-boys_files = glob('images/boys/*/*')
+# my files are set up like "images/like/image1.jpg" and "images/dislike/image1.jpg"
+like_files = glob('images/like/Image*')
+dislike_files = glob('images/dislike/Image*')
 
 process_file = img_to_array
 
-raw_data = [(process_file(filename),'girl',filename) for filename in girls_files] + \
-           [(process_file(filename),'boy',filename) for filename in boys_files]
+raw_data = [(process_file(filename),'like',filename) for filename in like_files] + \
+           [(process_file(filename),'dislike',filename) for filename in dislike_files]
 
 # randomly order the data
 seed(0)
@@ -49,7 +49,7 @@ labels = np.array([_y for (cd,_y,f) in raw_data])
 # find the principal components
 pca = RandomizedPCA(n_components=N_COMPONENTS, random_state=0)
 X = pca.fit_transform(data)
-y = [1 if label == 'boy' else 0 for label in labels]
+y = [1 if label == 'dislike' else 0 for label in labels]
 
 def image_from_component(component):
     """takes one of the principal components and turns it into an image"""
@@ -84,8 +84,7 @@ for i,component in enumerate(pca.components_):
     Image.open(raw_data[no_i][2]).save(str(i) + "_none.png")
 
 def reconstruct(shirt_number):
-    """this was my attempt to reconstruct shirts from their first 10 principal components
-    but they don't look like much of anything"""
+    """needs 100+ components to look interesting"""
     components = pca.components_
     eigenvalues = X[shirt_number]
     eigenzip = zip(eigenvalues,components)
@@ -99,8 +98,8 @@ def reconstruct(shirt_number):
     img.save('reconstruct.png')
 
 #find and reconstruct the monkey shirt:
-monkey_index = [i for (i,(cd,_y,f)) in enumerate(raw_data) if '243A637' in f]
-reconstruct(282)
+#monkey_index = [i for (i,(cd,_y,f)) in enumerate(raw_data) if '243A637' in f]
+#reconstruct(282)
     
 #
 # and now for some predictive modeling
@@ -124,10 +123,10 @@ print "score",clf.score(X_test,y_test)
 # first, let's find the model score for every shirt in our dataset
 probs = zip(clf.decision_function(X),raw_data)
 
-girliest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'girl' else 1,p))[0]
-girliest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'boy' else 1,p))[0]
-boyiest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'girl' else 1,-p))[0]
-boyiest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'boy' else 1,-p))[0]
+girliest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,p))[0]
+girliest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,p))[0]
+boyiest_girl_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'like' else 1,-p))[0]
+boyiest_boy_shirt = sorted(probs,key=lambda (p,(cd,g,f)): (0 if g == 'dislike' else 1,-p))[0]
 most_androgynous_shirt = sorted(probs,key=lambda (p,(cd,g,f)): abs(p))[0]
 
 # and let's look at the most and least extreme shirts
@@ -149,32 +148,32 @@ INTERVAL = 0.1
 # first do the girls
 score = lowest_score
 while score <= highest_score:
-    true_positives  = len([p for p in probs if p[0] <= score and p[1][1] == 'girl'])
-    false_positives = len([p for p in probs if p[0] <= score and p[1][1] == 'boy'])
+    true_positives  = len([p for p in probs if p[0] <= score and p[1][1] == 'like'])
+    false_positives = len([p for p in probs if p[0] <= score and p[1][1] == 'dislike'])
     positives = true_positives + false_positives
     if positives > 0:
         precision = 1.0 * true_positives / positives
         recall = 1.0 * true_positives / num_girls
-        print "girls",score,precision,recall
+        print "likes",score,precision,recall
     score += INTERVAL
 
 # then do the boys
 score = highest_score
 while score >= lowest_score:
-    true_positives  = len([p for p in probs if p[0] >= score and p[1][1] == 'boy'])
-    false_positives = len([p for p in probs if p[0] >= score and p[1][1] == 'girl'])
+    true_positives  = len([p for p in probs if p[0] >= score and p[1][1] == 'dislike'])
+    false_positives = len([p for p in probs if p[0] >= score and p[1][1] == 'like'])
     positives = true_positives + false_positives
     if positives > 0:
         precision = 1.0 * true_positives / positives
         recall = 1.0 * true_positives / num_boys
-        print "boys",score,precision,recall
+        print "dislikes",score,precision,recall
     score -= INTERVAL
 
 # now do both
 score = lowest_score
 while score <= highest_score:
-    girls  = len([p for p in probs if p[0] <= score and p[1][1] == 'girl'])
-    boys = len([p for p in probs if p[0] <= score and p[1][1] == 'boy'])
+    girls  = len([p for p in probs if p[0] <= score and p[1][1] == 'like'])
+    boys = len([p for p in probs if p[0] <= score and p[1][1] == 'dislike'])
     print score, girls, boys
     score += INTERVAL
 
