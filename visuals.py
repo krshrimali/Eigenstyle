@@ -14,7 +14,7 @@ import random
 import os
 from statistics import mean, median, standard_deviation, inverse_normal_cdf, interquartile_range
 
-N_COMPONENTS = 80
+N_COMPONENTS = 200
 N_COMPONENTS_TO_SHOW = 40
 N_DRESSES_TO_SHOW = 12
 N_NEW_DRESSES_TO_CREATE = 20
@@ -185,7 +185,6 @@ def predictiveModeling():
         score += INTERVAL
 
 
-
 zipped = zip(X, raw_data)
 likes = [x[0] for x in zipped if x[1][1] == "like"]
 dislikes = [x[0] for x in zipped if x[1][1] == "dislike"]
@@ -194,70 +193,33 @@ likesByComponent = zip(*likes)
 dislikesByComponent = zip(*dislikes)
 allByComponent = zip(*X)
 
-
 def showHistoryOfDress(dressName):
     index = indexesForImageName(dressName)[0]
-    directory = "results/experiment/dress" + str(index) + "/"
+    directory = "results/history/dress" + str(index) + "/"
     if not os.path.exists(directory):
         os.makedirs(directory)
     dress = X[index]
     origImage = raw_data[index][2]
-    Image.open(origImage).save(directory + "dress_" + str(index) + "original.png")
+    Image.open(origImage).save(directory + "dress_" + str(index) + "_original.png")
     for i in range(1,len(dress)):
         reduced = dress[:i]
         construct(reduced, directory + "dress_" + str(index) + "_" + str(i))
 
-for index in range(40):
-    directory = "results/experiment/dress" + str(index) + "/"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    dress = X[index]
-    origImage = raw_data[index][2]
-    Image.open(origImage).save(directory + "dress_" + str(index) + "original.png")
-    for i in range(1,len(dress)):
-        reduced = dress[:i]
-        construct(reduced, directory + "dress_" + str(index) + "_" + str(i))
+def bulkShowDressHistories():
+    for index in range(100,120):
+        directory = "results/history/dress" + str(index) + "/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        dress = X[index]
+        origImage = raw_data[index][2]
+        Image.open(origImage).save(directory + "dress_" + str(index) + "original.png")
+        for i in range(1,len(dress)):
+            reduced = dress[:i]
+            construct(reduced, directory + "dress_" + str(index) + "_" + str(i))
 
-
-for i, x in enumerate(allByComponent):
-    print(i)
-    if i == 0:
-        continue
-
-    x = sorted(x)
-    most_i = x[-1][0]
-    least_i = x[0][0]
-
-    for j in range(5):
-        most_j = j * -1 - 1
-
-        Image.open(raw_data[ranked_shirts[most_j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress__most" + str(j) + ".png")
-        Image.open(raw_data[ranked_shirts[j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress_least" + str(j) + ".png")
-
-
-    hiNum = max(x)
-    loNum = min(x)
-    hi = x.index(max(x))
-    lo = x.index(min(x))
-    hiImage = raw_data[hi][2]
-    loImage = raw_data[lo][2]
-    print(hiImage)
-    print(loImage)
-    Image.open(hiImage).save("results/experiment/" + str(i) + "_hi_original.png")
-    Image.open(loImage).save("results/experiment/" + str(i) + "_lo_original.png")
-    hiComps = X[hi]
-    hiCompsToCurrent = hiComps[:i]
-    hiCompsToPrevious = hiComps[:i-1]
-    loComps = X[lo]
-    loCompsToCurrent = loComps[:i]
-    loCompsToPrevious = loComps[:i-1]
-    construct(hiCompsToPrevious, "results/experiment/" + str(i) + "_hi_from_comps_previous")
-    construct(hiCompsToCurrent, "results/experiment/" + str(i) + "_hi_from_comps_current_(" + str(hiNum) + ")")
-    construct(loCompsToPrevious, "results/experiment/" + str(i) + "_lo_from_comps_previous")
-    construct(loCompsToCurrent, "results/experiment/" + str(i) + "_lo_from_comps_current_(" + str(loNum) + ")")
-
-
-
+arr = ["Image280like", "Image278like", "Image279like", "Image275like", "Image29like", "Image6like", "Image2like"]
+for imageName in arr:
+    showHistoryOfDress(imageName)
 
 def reconstruct(shirt_number, saveName = 'reconstruct'):
     """needs 100+ components to look interesting"""
@@ -289,33 +251,31 @@ def construct(eigenvalues, saveName = 'reconstruct'):
 
 # we need a multiplier, otherwise the image comes out too dark to see
 # take it out if you wanna post-process data instead
-def makeRandomDress(saveName, liked = True, multiplier = 5):
-    randomArr = []
-    base = likesByComponent if liked else dislikesByComponent
-    for c in base[:150]:
-        mu = mean(c)
-        sigma = standard_deviation(c)
-        p = random.uniform(0.3, 0.7)
-        value = inverse_normal_cdf(p, mu, sigma)
-        randomArr.append(value * multiplier)
-    construct(randomArr, 'results/createdDresses/' + saveName)
-
-def makeRandomDress(saveName, liked, multiplier, percentExtremeComponents):
+def makeRandomDress(saveName, liked):
     randomArr = []
     base = likesByComponent if liked else dislikesByComponent
     for c in base[:100]:
         mu = mean(c)
         sigma = standard_deviation(c)
         p = random.uniform(0.0, 1.0)
-        value = inverse_normal_cdf(p, mu, sigma)
-        if random.uniform(0.0, 1.0) < percentExtremeComponents:
-            value *= multiplier
-        if value > 10000: 
-            value = 10000
-        if value < -10000:
-            value = -10000
-        randomArr.append(value)
+        num = inverse_normal_cdf(p, mu, sigma)
+        randomArr.append(boundedValue(num))
     construct(randomArr, 'results/createdDresses/' + saveName)
+
+def makeCompletelyRandomDress(saveName):
+    randomArr = []
+    for i in range(0, N_COMPONENTS):
+        rand = random.uniform(-10000, 10000)
+        randomArr.append(rand)
+    construct(randomArr, 'results/createdDresses/' + saveName)
+
+
+def boundedValue(value):
+    if value > 10000: 
+        return 10000
+    if value < -10000:
+        return -10000
+    return value
 
 def reconstructKnownDresses():
     print("reconstructing dresses...")
@@ -337,12 +297,11 @@ def createNewDresses():
         makeRandomDress(saveNameLike, True)
         makeRandomDress(saveNameDislike, False)
 
-    for i in range(3):
+    for i in range(0,20):
         for j in range(1,10):
             p = j / 10.0
             save_name = "rand" + "_" + str(p) +  "_" + str(i) 
-            makeRandomDress(save_name, True, 2, p)
-
+            makeRandomDress(save_name, True, p)
 
 def printComponentStatistics():
     print("component statistics:\n")
