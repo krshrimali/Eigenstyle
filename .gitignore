@@ -1,2 +1,4 @@
 images/like/Image*
 images/dislike/Image*
+
+*.pyc
