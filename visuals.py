@@ -280,13 +280,13 @@ allByComponent = zip(*X)
 
 
 
-#printComponentStatistics()
+printComponentStatistics()
 
-#createEigendressPictures()
+createEigendressPictures()
 
-#predictiveModeling()
+predictiveModeling()
 
-#reconstructKnownDresses()
+reconstructKnownDresses()
 
 bulkShowDressHistories(0,1)
 
