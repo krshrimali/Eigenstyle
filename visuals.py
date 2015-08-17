@@ -34,31 +34,23 @@ def img_to_array(filename):
     img_wide = img.reshape(1, s)
     return img_wide[0]
 
-def image_from_component(component):
-    """takes one of the principal components and turns it into an image"""
-    hi = max(component)
-    lo = min(component)
-    n = len(component) / 3
-    def rescale(x):
-        return int(255 * (x - lo) / (hi - lo))
-    d = [(rescale(component[3 * i]),
-          rescale(component[3 * i + 1]),
-          rescale(component[3 * i + 2])) for i in range(n)]
-    im = Image.new('RGB',STANDARD_SIZE)
-    im.putdata(d)
-    return im
+def makeFolder(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 # write out each eigendress and the dresses that most and least match it
 # the file names here are chosen because of the order i wanna look at the results
 # (when displayed alphabetically in finder)
 def createEigendressPictures():
     print("creating eigendress pictures")
+    directory = "results/eigendresses/"
+    makeFolder(directory)
     for i in range(N_COMPONENTS_TO_SHOW):
         component = pca.components_[i]
-        img = image_from_component(component)
-        img.save("results/eigendresses/" + str(i) + "_eigendress___.png")
+        img = image_from_component_values(component)
+        img.save(directory + str(i) + "_eigendress___.png")
         reverse_img = PIL.ImageOps.invert(img)
-        reverse_img.save("results/eigendresses/" + str(i) + "_eigendress_inverted.png")
+        reverse_img.save(directory + str(i) + "_eigendress_inverted.png")
         ranked_dresses = sorted(enumerate(X),
                key=lambda (a,x): x[i])
         most_i = ranked_dresses[-1][0]
@@ -66,14 +58,17 @@ def createEigendressPictures():
 
         for j in range(N_DRESSES_TO_SHOW):
             most_j = j * -1 - 1
-            Image.open(raw_data[ranked_dresses[most_j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress__most" + str(j) + ".png")
-            Image.open(raw_data[ranked_dresses[j][0]][2]).save("results/eigendresses/" + str(i) + "_eigendress_least" + str(j) + ".png")
+            Image.open(raw_data[ranked_dresses[most_j][0]][2]).save(directory + str(i) + "_eigendress__most" + str(j) + ".png")
+            Image.open(raw_data[ranked_dresses[j][0]][2]).save(directory + str(i) + "_eigendress_least" + str(j) + ".png")
 
 def indexesForImageName(imageName):
     return [i for (i,(cd,_y,f)) in enumerate(raw_data) if imageName in f]
 
 def predictiveModeling():
     print("logistic regression...")
+    directory = "results/notableDresses/"
+    makeFolder(directory)
+
     # split the data into a training set and a test set
     train_split = int(len(data) * 4.0 / 5.0)
 
@@ -106,15 +101,15 @@ def predictiveModeling():
     most_interesting_things =  sorted(cd,key=lambda (x,(d,g,f)): min([abs(c) for c in x]),reverse=True)
 
     for i in range(10):
-        Image.open(prettiest_liked_things[i][1][2]).save("results/notableDresses/prettiest_pretty_" + str(i) + ".png")
-        Image.open(prettiest_disliked_things[i][1][2]).save("results/notableDresses/prettiest_ugly_" + str(i) + ".png")
-        Image.open(ugliest_liked_things[i][1][2]).save("results/notableDresses/ugliest_pretty_" + str(i) + ".png")
-        Image.open(ugliest_disliked_things[i][1][2]).save("results/notableDresses/ugliest_ugly_" + str(i) + ".png")
-        Image.open(in_between_things[i][1][2]).save("results/notableDresses/neither_pretty_nor_ugly_" + str(i) + ".png")
-        Image.open(least_extreme_things[i][1][2]).save("results/notableDresses/least_extreme_" + str(i) + ".png")
-        Image.open(most_extreme_things[i][1][2]).save("results/notableDresses/most_extreme_" + str(i) + ".png")
-        Image.open(least_interesting_things[i][1][2]).save("results/notableDresses/least_interesting_" + str(i) + ".png")
-        Image.open(most_interesting_things[i][1][2]).save("results/notableDresses/most_interesting_" + str(i) + ".png")
+        Image.open(prettiest_liked_things[i][1][2]).save(directory + "prettiest_pretty_" + str(i) + ".png")
+        Image.open(prettiest_disliked_things[i][1][2]).save(directory + "prettiest_ugly_" + str(i) + ".png")
+        Image.open(ugliest_liked_things[i][1][2]).save(directory + "ugliest_pretty_" + str(i) + ".png")
+        Image.open(ugliest_disliked_things[i][1][2]).save(directory + "directoryugliest_ugly_" + str(i) + ".png")
+        Image.open(in_between_things[i][1][2]).save(directory + "neither_pretty_nor_ugly_" + str(i) + ".png")
+        Image.open(least_extreme_things[i][1][2]).save(directory + "least_extreme_" + str(i) + ".png")
+        Image.open(most_extreme_things[i][1][2]).save(directory + "most_extreme_" + str(i) + ".png")
+        Image.open(least_interesting_things[i][1][2]).save(directory + "least_interesting_" + str(i) + ".png")
+        Image.open(most_interesting_things[i][1][2]).save(directory + "most_interesting_" + str(i) + ".png")
 
     # and now let's look at precision-recall
     probs = zip(clf.decision_function(X_test),raw_data[train_split:])
@@ -159,8 +154,7 @@ def predictiveModeling():
 def showHistoryOfDress(dressName):
     index = indexesForImageName(dressName)[0]
     directory = "results/history/dress" + str(index) + "/"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    makeFolder(directory)
     dress = X[index]
     origImage = raw_data[index][2]
     Image.open(origImage).save(directory + "dress_" + str(index) + "_original.png")
@@ -171,11 +165,10 @@ def showHistoryOfDress(dressName):
 def bulkShowDressHistories(lo, hi):
     for index in range(lo, hi):
         directory = "results/history/dress" + str(index) + "/"
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        makeFolder(directory)
         dress = X[index]
         origImage = raw_data[index][2]
-        Image.open(origImage).save(directory + "dress_" + str(index) + "original.png")
+        Image.open(origImage).save(directory + "dress_" + str(index) + "_original.png")
         for i in range(1,len(dress)):
             reduced = dress[:i]
             construct(reduced, directory + "dress_" + str(index) + "_" + str(i))
@@ -190,20 +183,25 @@ def construct(eigenvalues, saveName = 'reconstruct'):
     N = len(components[0])   
     r = [int(sum([w * c[i] for (w,c) in eigenzip]))
                      for i in range(N)]
-    hi = max(r)
-    lo = min(r)
-    n = len(r) / 3
+    img = image_from_component_values(r)
+    img.save(saveName + '.png')
+
+def image_from_component_values(component):
+    """takes one of the principal components and turns it into an image"""
+    hi = max(component)
+    lo = min(component)
+    n = len(component) / 3
     divisor = hi - lo
     if divisor == 0:
         divisor = 1
     def rescale(x):
         return int(255 * (x - lo) / divisor)
-    d = [(rescale(r[3 * i]),
-          rescale(r[3 * i + 1]),
-          rescale(r[3 * i + 2])) for i in range(n)]
-    img = Image.new('RGB',STANDARD_SIZE)
-    img.putdata(d)
-    img.save(saveName + '.png')
+    d = [(rescale(component[3 * i]),
+          rescale(component[3 * i + 1]),
+          rescale(component[3 * i + 2])) for i in range(n)]
+    im = Image.new('RGB',STANDARD_SIZE)
+    im.putdata(d)
+    return im
 
 def makeRandomDress(saveName, liked):
     randomArr = []
@@ -213,25 +211,22 @@ def makeRandomDress(saveName, liked):
         sigma = standard_deviation(c)
         p = random.uniform(0.0, 1.0)
         num = inverse_normal_cdf(p, mu, sigma)
-        randomArr.append(boundedValue(num))
+        randomArr.append(num)
     construct(randomArr, 'results/createdDresses/' + saveName)
-
-def boundedValue(value):
-    if value > 10000: 
-        return 10000
-    if value < -10000:
-        return -10000
-    return value
 
 def reconstructKnownDresses():
     print("reconstructing dresses...")
+    directory = "results/recreatedDresses/"
+    makeFolder(directory)
     for i in range(N_DRESSES_TO_SHOW):
-        Image.open(raw_data[i][2]).save("results/recreatedDresses/" + str(i) + "_original.png")
-        saveName = "results/recreatedDresses/" + str(i) 
+        Image.open(raw_data[i][2]).save(directory + str(i) + "_original.png")
+        saveName = directory + str(i) 
         reconstruct(i, saveName)
 
 def createNewDresses():
     print("creating brand new dresses...")
+    directory = "results/createdDresses/"
+    makeFolder(directory)
     for i in range(N_NEW_DRESSES_TO_CREATE):
         saveNameLike = "newLikeDress" + str(i)
         saveNameDislike = "newDislikeDress" + str(i)
@@ -258,12 +253,12 @@ dislike_files = glob('images/dislike/Image*')
 process_file = img_to_array
 
 print('processing images...')
-print('(this takes a long time if you have a lot of images')
+print('(this takes a long time if you have a lot of images)')
 raw_data = [(process_file(filename),'like',filename) for filename in like_files] + \
            [(process_file(filename),'dislike',filename) for filename in dislike_files]
 
 # randomly order the data
-seed(0)
+#seed(0)
 shuffle(raw_data)
 
 # pull out the features and the labels
@@ -285,13 +280,15 @@ allByComponent = zip(*X)
 
 
 
-printComponentStatistics()
+#printComponentStatistics()
 
-createEigendressPictures()
+#createEigendressPictures()
 
-predictiveModeling()
+#predictiveModeling()
 
-reconstructKnownDresses()
+#reconstructKnownDresses()
+
+bulkShowDressHistories(0,1)
 
 createNewDresses()
 
