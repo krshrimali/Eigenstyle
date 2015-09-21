@@ -1,6 +1,3 @@
-from collections import defaultdict
-from random import shuffle, seed
-import numpy as np
 import math
 
 # The following methods are from Joel Grus
