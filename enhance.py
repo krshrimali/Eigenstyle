@@ -3,6 +3,24 @@ from math import floor, ceil
 import os
 import face_detect
 from colorcorrect.algorithm import automatic_color_equalization
+import subprocess
+import re
+
+
+BRISQUE = 'brisque_revised/brisquequality'
+BRISQUE_SCORE_PATTERN = re.compile('score in main file is given by:(-?\\d+\\.\\d+)')
+
+
+def brisque_quality_score(image_path):
+    process = subprocess.Popen([BRISQUE, '-im', image_path], stdout=subprocess.PIPE)
+    process_output = process.communicate()[0]
+    match = BRISQUE_SCORE_PATTERN.search(process_output)
+    if not len(match.groups()) == 1:
+        print "{}: BRISQUE output was: {}".format(image_path, process_output)
+        return None
+    # otherwise we're good so return score
+    return float(match.groups()[0])
+
 
 def simplest_color_balance(src, percent=1):
     # assert(input.channels() ==3)
