@@ -11,6 +11,10 @@ from skimage.segmentation import mark_boundaries
 DEFAULT_FACE_CASCADE_PATH = "haarcascade_frontalface_default.xml"
 DEFAULT_FACE_CASCADE = cv2.CascadeClassifier(DEFAULT_FACE_CASCADE_PATH)
 
+DEFAULT_PEOPLE_DETECTOR = cv2.HOGDescriptor_getDefaultPeopleDetector()
+HOG_DESCRIPTOR = cv2.HOGDescriptor()
+HOG_DESCRIPTOR.setSVMDetector(DEFAULT_PEOPLE_DETECTOR)
+
 
 def cv_open_image_from_url(imagePath):
     # Read the image
@@ -144,6 +148,12 @@ def print_box_stats(boxes):
     print "min h", min(heights)
     print "median h", median(heights)
     print "max h", max(heights)
+
+
+def detect_people(im):
+    found, w = HOG_DESCRIPTOR.detectMultiScale(im)
+    # found, w = HOG_DESCRIPTOR.detectMultiScale(im, winStride=(8, 8), padding=(32, 32), scale=1.05)
+    return found
 
 
 def skin_detect(image):
