@@ -23,8 +23,7 @@ def brisque_quality_score(image_path):
     score = float(match.groups()[0])
     score = max(0.0, min(100.0, score))  # clip to [0,100]
     score = 100.0 - score  # make higher better instead of lower
-    score = int(score)  # make it an int - drop false precision
-    return score
+    return score/100.0
 
 
 def simplest_color_balance(src, percent=1):
@@ -134,7 +133,7 @@ def face_score(faces):
         score = 1.0
     else:
         score = 1.0 / (len(faces)-1)
-    return int(100*score)
+    return score
 
 
 def auto_fix(im):
@@ -186,8 +185,12 @@ def resolution_score(size):
     l = max(0.0, l-100.0)  # clip to min
     l = min(70.0, l)  # clip to max
     l = l/70.0  # scale to 0-1
-    l = int(100*l)  # return int 0-100
     return l
+
+
+def lightness_score(im):
+    hls = cv2.cvtColor(im, cv2.cv.CV_BGR2HLS)
+    return hls[:, :, 1].mean()/255.0
 
 
 def fix_some_from_mongo(style_limit=10, images_per_style=10):
@@ -239,7 +242,7 @@ def fix_some_from_mongo(style_limit=10, images_per_style=10):
             cv2.imwrite(os.path.join(style_dir, '{:02}_{:03}_fixed.png'.format(score, i)), fixed)
 
 
-def fix_all_from_mongo_and_update():
+def fix_all_from_mongo_and_update(first_style_index=0, first_image_index=0):
     db = product_catalog.connect_to_mongo()
     style_to_image_map = {}
     for i, style in enumerate(product_catalog.DRESS_STYLES.keys()):
@@ -254,33 +257,43 @@ def fix_all_from_mongo_and_update():
     print('style count: {}'.format(len(style_to_image_map)))
 
     for s, style in enumerate(style_to_image_map.keys()):
+        if s < first_style_index:
+            continue
         print('{:4} style {} image count {}'.format(s, style, len(style_to_image_map[style])))
         for i, id_and_path in enumerate(style_to_image_map[style]):
-            oid, path = id_and_path
-            print('{:3} {}'.format(i, path))
-            im = face_detect.cv_open_image_from_url(path)
-            fixed, faces = auto_fix(im)
-            bscore = brisque_quality_score_from_memory(fixed)
-            print("brisque score:    {0}".format(bscore))
-            fscore = face_score(faces)
-            print("face score:       {0}".format(fscore))
-            rscore = resolution_score(fixed.shape[:2])
-            print("resolution score: {0}".format(rscore))
-            # compute blended score
-            score = int(0.3333*bscore + 0.3333*fscore + 0.3333*rscore)
-            print("********** score: {0}".format(score))
-            db.Photo.update(
-                {'_id': oid},
-                {
-                    '$set':
+            if s == first_style_index and i < first_image_index:
+                continue
+            try:
+                oid, path = id_and_path
+                print('{:3} {}'.format(i, path))
+                im = face_detect.cv_open_image_from_url(path)
+                fixed, faces = auto_fix(im)
+                bscore = brisque_quality_score_from_memory(fixed)
+                print("brisque score:    {:01.2f}".format(bscore))
+                fscore = face_score(faces)
+                print("face score:       {:01.2f}".format(fscore))
+                rscore = resolution_score(fixed.shape[:2])
+                print("resolution score: {:01.2f}".format(rscore))
+                lscore = lightness_score(fixed)
+                print("lightness score:  {:01.2f}".format(lscore))
+                # compute blended score
+                score = bscore * fscore * rscore * lscore
+                print("********** score: {:01.2f}".format(score))
+                db.Photo.update(
+                    {'_id': oid},
                     {
-                        'analysis.brisqueScore': bscore,
-                        'analysis.faceScore': fscore,
-                        'analysis.resolutionScore': rscore,
-                        'analysis.compositeScore': score
+                        '$set':
+                        {
+                            'analysis.brisqueScore': bscore,
+                            'analysis.faceScore': fscore,
+                            'analysis.resolutionScore': rscore,
+                            'analysis.lightnessScore': lscore,
+                            'analysis.compositeScore': score
+                        }
                     }
-                }
-            )
+                )
+            except:
+                pass
 
 
 # import enhance
@@ -296,3 +309,5 @@ def fix_all_from_mongo_and_update():
 # dresses = dress_boxes(faces)
 # draw_boxes(im, dresses, (255,0,0))
 # cv2.imshow("faces and dresses", im)
+
+# image 14 of style 10

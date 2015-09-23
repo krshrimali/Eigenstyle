@@ -56,6 +56,18 @@ def fetch_product_types():
     return product_types
 
 
+IMAGE_SERVICE_URL = 'http://imgfs01.stage.renttherunway.it:8888'
+PREPROCESSED_ENDPOINT = IMAGE_SERVICE_URL + '/reviewImages/preprocessed'
+
+
+def put_preprocessed_image(photo_id, image_file):
+    r = requests.put(PREPROCESSED_ENDPOINT, data={'photoId': photo_id}, files={'file': open(image_file, 'rb')})
+    if r.status_code == 200:
+        return r.json()
+    else:
+        raise
+
+
 MONGO_HOST = 'dfw-mongos0.objectrocket.com'
 MONGO_PORT = '27020'
 MONGO_DB_NAME = 'photo_reviews_stage'
