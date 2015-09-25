@@ -24,6 +24,10 @@ def cv_open_image_from_url(imagePath):
     return image
 
 
+def is_color(im):
+    return im is not None and im.shape is not None and len(im.shape) == 3 and im.shape[2] == 3
+
+
 MEDIAN_FACE = (118, 18, 36, 36)
 
 
@@ -38,7 +42,10 @@ def best_face(faces):
 
 
 def detect_faces(image, face_cascade=DEFAULT_FACE_CASCADE, scale_factor=1.1, min_neighbors=1, min_size=(25, 25), max_size=(50, 50), flags=cv2.cv.CV_HAAR_SCALE_IMAGE):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if is_color(image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image
     # Detect faces in the image
     faces = face_cascade.detectMultiScale(
         gray,
