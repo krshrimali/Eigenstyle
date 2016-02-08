@@ -158,9 +158,8 @@ def print_box_stats(boxes):
 
 
 def detect_people(im):
-    found, w = HOG_DESCRIPTOR.detectMultiScale(im)
-    # found, w = HOG_DESCRIPTOR.detectMultiScale(im, winStride=(8, 8), padding=(32, 32), scale=1.05)
-    return found
+    found, w = HOG_DESCRIPTOR.detectMultiScale(im, winStride=(8, 8), padding=(32, 32), scale=1.05)
+    return found, w
 
 
 def skin_detect(image):
@@ -208,8 +207,8 @@ def skin_detect2(image, marks=False):
     if marks:
         skin = mark_boundaries(skin, superpixel_labels)
 
-    cv2.imshow("images", np.hstack([image, skin]))
-    cv2.waitKey(0)
+    # cv2.imshow("images", np.hstack([image, skin]))
+    # cv2.waitKey(0)
     return skin
 
 

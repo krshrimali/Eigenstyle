@@ -2,11 +2,12 @@ import cv2
 from math import floor, ceil, log
 import os
 import face_detect
-from colorcorrect.algorithm import automatic_color_equalization
-import subprocess
+import colorcorrect.algorithm
 import re
 import product_catalog
 import pymongo
+import subprocess
+import numpy as np
 
 BRISQUE = 'brisque_revised/brisquequality'
 BRISQUE_SCORE_PATTERN = re.compile('score in main file is given by:(-?\\d+\\.\\d+)')
@@ -142,6 +143,33 @@ def fit_in(src, max_h, max_w):
     return cv2.resize(src, dimensions, interpolation=cv2.INTER_AREA)
 
 
+def adaptive_histogram_equalize(src):
+    is_color = face_detect.is_color(src)
+    if is_color:
+        ycrcb = cv2.cvtColor(src, cv2.COLOR_BGR2YCR_CB)
+        y, cr, cb = cv2.split(ycrcb)
+    else:
+        y = src
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
+    dst = clahe.apply(y)
+    # dst = cv2.equalizeHist(y)
+    if is_color:
+        ycrcb = cv2.merge((dst, cr, cb))
+        dst = cv2.cvtColor(ycrcb, cv2.COLOR_YCR_CB2BGR)
+    return dst
+
+
+def grabCut(src, box):
+    mask = np.zeros(src.shape[:2], np.uint8)
+    bgdModel = np.zeros((1, 65), np.float64)
+    fgdModel = np.zeros((1, 65), np.float64)
+
+    cv2.grabCut(src, mask, box, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
+    mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    dst = src*mask2[:, :, np.newaxis]
+    return dst
+
+
 def auto_fix(im, noise_removal=False):
     im = auto_crop_hsv(im)
     im = auto_crop_hsv(im, crop_white=True)
@@ -151,15 +179,23 @@ def auto_fix(im, noise_removal=False):
     faces = [face for face in faces if face[1] < im.shape[0]*0.4]
     # find dresses
     dresses = [dress_box2(face, im.shape[:2]) for face in faces]
+    # if len(dresses) > 0:
+    #     print('grabcut!')
+    #     im = grabCut(im, bounding_box(dresses+faces))
     if len(faces) > 0:
         im = crop_to_human(im, faces, dresses)
     # limit max size (after cropping)
     im = fit_in(im, 1800, 1200)
     if noise_removal:
         im = cv2.fastNlMeansDenoisingColored(im)
-    #im = simplest_color_balance(im)
+    im = face_detect.skin_detect2(im, marks=True)
+    # im = simplest_color_balance(im)
+    # print('retinex starting...')
+    # im = colorcorrect.algorithm.retinex_with_adjust(im)
+    # print('retinex complete.')
     #face_detect.draw_boxes(im, faces)
     #face_detect.draw_boxes(im, dresses, (255, 0, 0))
+    # face_detect.draw_boxes(im, people, (255, 0, 0))
     return im, faces
 
 
@@ -278,8 +314,8 @@ def fix_all_from_mongo_and_update(remote_update=False, local_output=False, first
                 # compute blended score
                 score = bscore * fscore * rscore * lscore
                 print("     ********** score: {:01.2f}".format(score))
-                print("     updating mongo...")
                 if remote_update:
+                    print("     updating mongo...")
                     db.Photo.update(
                         {'_id': oid},
                         {
