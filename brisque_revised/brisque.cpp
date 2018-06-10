@@ -26,13 +26,12 @@ void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
 
 		//compute sigma
 		IplImage* sigma = cvCreateImage(cvGetSize(imdist_scaled), IPL_DEPTH_64F, 1);
-		cvMul(imdist_scaled, imdist_scaled, sigma);
-		cvSmooth(sigma, sigma, CV_GAUSSIAN, 7, 7, 1.16666 );
-		cvSub(sigma, mu_sq, sigma);
-		cvPow(sigma, sigma, 0.5);
-
-		//compute structdis = (x-mu)/sigma
-		cvAddS(sigma, cvScalar(1.0/255), sigma);
+	    	cvSub(imdist_scaled, mu, sigma); 
+	    	cvPow(sigma, sigma, 2); 
+	    	cvSmooth(sigma, sigma, CV_GAUSSIAN, 7, 7, 1.16666);
+	    	cvPow(sigma, sigma, 0.5);
+	    	
+	    	// add scalar to avoid divide by zero exception
 		IplImage* structdis = cvCreateImage(cvGetSize(imdist_scaled), IPL_DEPTH_64F, 1);
 		cvSub(imdist_scaled, mu, structdis);
 		cvDiv(structdis, sigma, structdis);
